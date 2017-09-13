@@ -1271,6 +1271,14 @@ extern ROCKSDB_LIBRARY_API rocksdb_transactiondb_t* rocksdb_transactiondb_open(
     const rocksdb_transactiondb_options_t* txn_db_options, const char* name,
     char** errptr);
 
+extern ROCKSDB_LIBRARY_API rocksdb_transactiondb_t* rocksdb_transactiondb_open_column_families(
+    const rocksdb_options_t* options,
+    const rocksdb_transactiondb_options_t* txn_db_options,
+    const char* name, int num_column_families,
+    const char** column_family_names,
+    const rocksdb_options_t** column_family_options,
+    rocksdb_column_family_handle_t** column_family_handles, char** errptr);
+
 extern ROCKSDB_LIBRARY_API const rocksdb_snapshot_t*
 rocksdb_transactiondb_create_snapshot(rocksdb_transactiondb_t* txn_db);
 
@@ -1369,6 +1377,11 @@ rocksdb_transaction_create_iterator(rocksdb_transaction_t* txn,
                                     const rocksdb_readoptions_t* options);
 
 extern ROCKSDB_LIBRARY_API rocksdb_iterator_t*
+rocksdb_transaction_create_iterator_cf(rocksdb_transaction_t* txn,
+                                       const rocksdb_readoptions_t* options,
+                                       const rocksdb_column_family_handle_t *column_family);
+
+extern ROCKSDB_LIBRARY_API rocksdb_iterator_t*
 rocksdb_transactiondb_create_iterator(rocksdb_transactiondb_t* txn_db,
                                       const rocksdb_readoptions_t* options);
 
@@ -1379,9 +1392,22 @@ extern ROCKSDB_LIBRARY_API rocksdb_checkpoint_t*
 rocksdb_transactiondb_checkpoint_object_create(rocksdb_transactiondb_t* txn_db,
                                                char** errptr);
 
+extern ROCKSDB_LIBRARY_API rocksdb_column_family_handle_t*
+rocksdb_optimistictransactiondb_create_column_family(
+    rocksdb_optimistictransactiondb_t* txn_db,
+    const rocksdb_options_t* column_family_options,
+    const char* column_family_name, char** errptr);
+
 extern ROCKSDB_LIBRARY_API rocksdb_optimistictransactiondb_t*
 rocksdb_optimistictransactiondb_open(const rocksdb_options_t* options,
                                      const char* name, char** errptr);
+
+extern ROCKSDB_LIBRARY_API rocksdb_optimistictransactiondb_t*
+rocksdb_optimistictransactiondb_open_column_families(
+    const rocksdb_options_t* options, const char* name, int num_column_families,
+    const char** column_family_names,
+    const rocksdb_options_t** column_family_options,
+    rocksdb_column_family_handle_t** column_family_handles, char** errptr);
 
 extern ROCKSDB_LIBRARY_API rocksdb_transaction_t*
 rocksdb_optimistictransaction_begin(

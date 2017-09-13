@@ -3302,6 +3302,41 @@ rocksdb_transactiondb_t* rocksdb_transactiondb_open(
   return result;
 }
 
+extern ROCKSDB_LIBRARY_API rocksdb_transactiondb_t*
+rocksdb_transactiondb_open_column_families(
+    const rocksdb_options_t* db_options,
+    const rocksdb_transactiondb_options_t* txn_db_options,
+    const char* name,
+    int num_column_families,
+    const char** column_family_names,
+    const rocksdb_options_t** column_family_options,
+    rocksdb_column_family_handle_t** column_family_handles,
+    char** errptr) {
+
+  std::vector<ColumnFamilyDescriptor> column_families;
+  for (int i = 0; i < num_column_families; i++) {
+    column_families.push_back(ColumnFamilyDescriptor(
+        std::string(column_family_names[i]),
+        ColumnFamilyOptions(column_family_options[i]->rep)));
+  }
+
+  TransactionDB* txn_db;
+  std::vector<ColumnFamilyHandle*> handles;
+  if (SaveError(errptr, TransactionDB::Open(DBOptions(db_options->rep), txn_db_options->rep,
+          std::string(name), column_families, &handles, &txn_db))) {
+    return nullptr;
+  }
+
+  for (size_t i = 0; i < handles.size(); i++) {
+    rocksdb_column_family_handle_t* c_handle = new rocksdb_column_family_handle_t;
+    c_handle->rep = handles[i];
+    column_family_handles[i] = c_handle;
+  }
+  rocksdb_transactiondb_t* result = new rocksdb_transactiondb_t;
+  result->rep = txn_db;
+  return result;
+}
+
 const rocksdb_snapshot_t* rocksdb_transactiondb_create_snapshot(
     rocksdb_transactiondb_t* txn_db) {
   rocksdb_snapshot_t* result = new rocksdb_snapshot_t;
@@ -3550,6 +3585,15 @@ rocksdb_iterator_t* rocksdb_transaction_create_iterator(
   return result;
 }
 
+// Create an iterator inside a transaction
+rocksdb_iterator_t* rocksdb_transaction_create_iterator_cf(
+    rocksdb_transaction_t* txn, const rocksdb_readoptions_t* options,
+    const rocksdb_column_family_handle_t *column_family) {
+  rocksdb_iterator_t* result = new rocksdb_iterator_t;
+  result->rep = txn->rep->GetIterator(options->rep, column_family->rep);
+  return result;
+}
+
 // Create an iterator outside a transaction
 rocksdb_iterator_t* rocksdb_transactiondb_create_iterator(
     rocksdb_transactiondb_t* txn_db, const rocksdb_readoptions_t* options) {
@@ -3574,6 +3618,17 @@ rocksdb_checkpoint_t* rocksdb_transactiondb_checkpoint_object_create(
   return result;
 }
 
+rocksdb_column_family_handle_t* rocksdb_optimistictransactiondb_create_column_family(
+    rocksdb_optimistictransactiondb_t* otxn_db,
+    const rocksdb_options_t* column_family_options,
+    const char* column_family_name, char** errptr) {
+  rocksdb_column_family_handle_t* handle = new rocksdb_column_family_handle_t;
+  SaveError(errptr, otxn_db->rep->GetBaseDB()->CreateColumnFamily(
+                        ColumnFamilyOptions(column_family_options->rep),
+                        std::string(column_family_name), &(handle->rep)));
+  return handle;
+}
+
 rocksdb_optimistictransactiondb_t* rocksdb_optimistictransactiondb_open(
     const rocksdb_options_t* options, const char* name,
     char** errptr) {
@@ -3581,6 +3636,41 @@ rocksdb_optimistictransactiondb_t* rocksdb_optimistictransactiondb_open(
   if (SaveError(errptr, OptimisticTransactionDB::Open(
                             options->rep, std::string(name), &otxn_db))) {
     return nullptr;
+  }
+  rocksdb_optimistictransactiondb_t* result =
+      new rocksdb_optimistictransactiondb_t;
+  result->rep = otxn_db;
+  return result;
+}
+
+extern ROCKSDB_LIBRARY_API rocksdb_optimistictransactiondb_t*
+rocksdb_optimistictransactiondb_open_column_families(
+    const rocksdb_options_t* db_options,
+    const char* name,
+    int num_column_families,
+    const char** column_family_names,
+    const rocksdb_options_t** column_family_options,
+    rocksdb_column_family_handle_t** column_family_handles,
+    char** errptr) {
+
+  std::vector<ColumnFamilyDescriptor> column_families;
+  for (int i = 0; i < num_column_families; i++) {
+    column_families.push_back(ColumnFamilyDescriptor(
+        std::string(column_family_names[i]),
+        ColumnFamilyOptions(column_family_options[i]->rep)));
+  }
+
+  OptimisticTransactionDB* otxn_db;
+  std::vector<ColumnFamilyHandle*> handles;
+  if (SaveError(errptr, OptimisticTransactionDB::Open(DBOptions(db_options->rep),
+          std::string(name), column_families, &handles, &otxn_db))) {
+    return nullptr;
+  }
+
+  for (size_t i = 0; i < handles.size(); i++) {
+    rocksdb_column_family_handle_t* c_handle = new rocksdb_column_family_handle_t;
+    c_handle->rep = handles[i];
+    column_family_handles[i] = c_handle;
   }
   rocksdb_optimistictransactiondb_t* result =
       new rocksdb_optimistictransactiondb_t;
